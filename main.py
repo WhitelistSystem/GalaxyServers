@@ -71,18 +71,35 @@ async def rr(ctx):
     await msg.add_reaction('<:Events:822321553420058665>')
     await msg.add_reaction('<:Survival:836263182653063168>')
     await ctx.message.delete()
-
+        
 @client.command()
 @commands.has_permissions(administrator=True)
-async def rrtickets(ctx):
+async def rtickets(ctx):
     embed=discord.Embed(title="Tickets", url="", 
-    description=f'For general support, click the "📩" reaction.', 
+    description=f'Please click the reaction to your corresponding problem.', 
     color=discord.Color.purple())
-    embed.set_footer(text=f"Reaction Roles")
+    embed.add_field(name="General", value="📩", inline=True)
+    embed.add_field(name="Appeal", value="<:ThinkingBan:861446127924674611>", inline=True)
+    embed.add_field(name="Reports", value="<a:VoteBan:861446399131385916>", inline=True)
+    embed.add_field(name="Bugs", value="<a:CatGlitch:861446879657459742>", inline=True)
+    embed.add_field(name="Donation", value="<a:Money:861451984376692777>", inline=True)
+    embed.add_field(name="Other", value="<a:Other:861447459828924436>", inline=True)
     msg = await ctx.channel.send(embed=embed)
     await msg.add_reaction('📩')
+    await msg.add_reaction('<:ThinkingBan:861446127924674611>')
+    await msg.add_reaction('<a:VoteBan:861446399131385916>')
+    await msg.add_reaction('<a:CatGlitch:861446879657459742>')
+    await msg.add_reaction('<a:Money:861451984376692777>')
+    await msg.add_reaction('<a:Other:861447459828924436>')
     await ctx.message.delete()
-        
+
+@client.command()
+async def enlarge(ctx, emoji: discord.PartialEmoji = None):
+    if not emoji:
+        await ctx.send("You need to provide an emoji!")
+    else:
+        await ctx.send(emoji.url)
+
 @client.event
 async def on_raw_reaction_add(payload):
   g = payload.guild_id
@@ -186,7 +203,7 @@ async def on_raw_reaction_add(payload):
 
         await ticketlog_channel.send(embed=em)
 
-        await message.reply('Ticket will close in 15 seconds.')
+        await message.channel.send('Ticket will close in 15 seconds.')
 
         await asyncio.sleep(15)
 
@@ -201,7 +218,7 @@ async def on_raw_reaction_add(payload):
       except asyncio.TimeoutError:
         await member.send('pp')
   
-  if str(payload.emoji) == '📩' and (payload.message_id) == 858167499294900234:
+  if str(payload.emoji) == '📩' and (payload.message_id) == 861459457442447370:
 
       await client.wait_until_ready()
 
@@ -345,6 +362,708 @@ async def on_raw_reaction_add(payload):
 
       em = discord.Embed(title="Responses:",
                         description=f"**Server**: {question1.content} \n**Name**: {question2.content}\n**Issue**: {question3.content} \n**Evidence**: {question4.content}",
+                        color=0x00a8ff)
+      
+      msg = await ticket_channel.send(content=x, embed=em)
+
+      await msg.add_reaction('🔒')
+
+  if str(payload.emoji) == '<:ThinkingBan:861446127924674611>' and (payload.message_id) == 861459457442447370:
+
+      await client.wait_until_ready()
+
+      with open("data.json") as f:
+        data = json.load(f)
+      
+      ticket_number = int(data["ticket-counter"])
+      ticket_number += 1
+
+      category_channel = guild.get_channel(836099144984035348)
+      ticketlog_channel = guild.get_channel(836102113892761671)
+      ticket_channel = await category_channel.create_text_channel(
+	    "ticket-{}".format(ticket_number))
+      await ticket_channel.set_permissions(guild.get_role(guild.id),
+                          send_messages=False,
+                          read_messages=False)
+     
+      for role_id in data["valid-roles"]:
+        role = guild.get_role(role_id)
+
+        await ticket_channel.set_permissions(role,
+                                            send_messages=True,
+                                            read_messages=True,
+                                            embed_links=True,
+                                            attach_files=True,
+                                            read_message_history=True,
+                                            external_emojis=True)
+                                          
+      await ticket_channel.set_permissions(payload.member,
+                                          send_messages=True,
+                                          read_messages=True,
+                                          add_reactions=True,
+                                          embed_links=True,
+                                          attach_files=True,
+                                          read_message_history=True,
+                                          external_emojis=True)
+
+      staff_role = discord.utils.get(guild.roles, name="Support")
+
+      pinged_msg_content = ""
+      non_mentionable_roles = []
+
+      if data["pinged-roles"] != []:
+
+        for role_id in data["pinged-roles"]:
+          role = payload.guild.get_role(role_id)
+
+          pinged_msg_content += role.mention
+          pinged_msg_content += " "
+
+          if role.mentionable:
+            pass
+          else:
+            await role.edit(mentionable=True)
+            non_mentionable_roles.append(role)
+        
+        await ticket_channel.send(pinged_msg_content)
+
+        for role in non_mentionable_roles:
+          await role.edit(mentionable=False)
+
+      data["ticket-channel-ids"].append(ticket_channel.id)
+
+      data["ticket-counter"] = int(ticket_number)
+      with open ("data.json", 'w') as f:
+        json.dump(data, f)
+
+      created_em = discord.Embed(
+        title="GalaxyServers Tickets",
+        description="Your ticket has been created at {}".format(
+          ticket_channel.mention),
+        color=0x00a8ff)
+
+      em = discord.Embed(title="Ticket Logs",
+                          description=f"",
+                          color=0x00a8ff)
+      em.add_field(name="Creator", value=f"{payload.member.mention}", inline=True)
+      em.add_field(name="Ticket", value=f"{ticket_channel.name}", inline=True)
+      time = datetime.now(tz=pytz.timezone('America/Denver'))
+      formatted = time.strftime("%m/%d/%y, %I:%M %p")
+      em.set_footer(text=formatted)
+
+      await ticketlog_channel.send(embed=em)
+
+      pp = guild.get_channel(payload.channel_id)
+
+      await pp.send(embed=created_em, delete_after=10)
+
+      await ticket_channel.send(
+        f'{payload.member.mention}, please answer the following questions.'
+      )
+
+      await ticket_channel.send('-----------------------------------------------')
+
+      channel = client.get_channel(payload.channel_id)
+      message = await channel.fetch_message(payload.message_id)
+      user = client.get_user(payload.user_id)
+      emoji = "<:ThinkingBan:861446127924674611>"
+      await message.remove_reaction(emoji, user)
+
+
+      def check(message):
+        return message.channel == ticket_channel and message.author == payload.member
+
+      a = discord.Embed(title="Question 1",
+                        description=f"What is your IGN?",
+                        color=0x00a8ff)
+
+      await ticket_channel.send(embed=a)
+
+      question1 = await client.wait_for('message', check=check)
+
+      b = discord.Embed(title="Question 2",
+                        description=f"Why should you be unbanned/unmuted?",
+                        color=0x00a8ff)
+
+      await ticket_channel.send(embed=b)
+
+      question2 = await client.wait_for('message', check=check)
+
+      c = discord.Embed(title="Question 3",
+                        description=f"Please provide any evidence, if applicable.",
+                        color=0x00a8ff)
+
+      await ticket_channel.send(embed=c)
+
+      question3 = await client.wait_for('message', check=check)
+
+      staff_role = discord.utils.get(guild.roles, name="Support Team")
+      staff_role2 = discord.utils.get(guild.roles, name="Staff Team")
+
+      x = f'Support will be with you shortly.'
+
+      em = discord.Embed(title="Responses:",
+                        description=f"**IGN**: {question1.content}\n**Reasoning**: {question2.content} \n**Evidence**: {question3.content}",
+                        color=0x00a8ff)
+      
+      msg = await ticket_channel.send(content=x, embed=em)
+
+      await msg.add_reaction('🔒')
+
+  if str(payload.emoji) == '<a:VoteBan:861446399131385916>' and (payload.message_id) == 861459457442447370:
+
+      await client.wait_until_ready()
+
+      with open("data.json") as f:
+        data = json.load(f)
+      
+      ticket_number = int(data["ticket-counter"])
+      ticket_number += 1
+
+      category_channel = guild.get_channel(836099144984035348)
+      ticketlog_channel = guild.get_channel(836102113892761671)
+      ticket_channel = await category_channel.create_text_channel(
+	    "ticket-{}".format(ticket_number))
+      await ticket_channel.set_permissions(guild.get_role(guild.id),
+                          send_messages=False,
+                          read_messages=False)
+     
+      for role_id in data["valid-roles"]:
+        role = guild.get_role(role_id)
+
+        await ticket_channel.set_permissions(role,
+                                            send_messages=True,
+                                            read_messages=True,
+                                            embed_links=True,
+                                            attach_files=True,
+                                            read_message_history=True,
+                                            external_emojis=True)
+                                          
+      await ticket_channel.set_permissions(payload.member,
+                                          send_messages=True,
+                                          read_messages=True,
+                                          add_reactions=True,
+                                          embed_links=True,
+                                          attach_files=True,
+                                          read_message_history=True,
+                                          external_emojis=True)
+
+      staff_role = discord.utils.get(guild.roles, name="Support")
+
+      pinged_msg_content = ""
+      non_mentionable_roles = []
+
+      if data["pinged-roles"] != []:
+
+        for role_id in data["pinged-roles"]:
+          role = payload.guild.get_role(role_id)
+
+          pinged_msg_content += role.mention
+          pinged_msg_content += " "
+
+          if role.mentionable:
+            pass
+          else:
+            await role.edit(mentionable=True)
+            non_mentionable_roles.append(role)
+        
+        await ticket_channel.send(pinged_msg_content)
+
+        for role in non_mentionable_roles:
+          await role.edit(mentionable=False)
+
+      data["ticket-channel-ids"].append(ticket_channel.id)
+
+      data["ticket-counter"] = int(ticket_number)
+      with open ("data.json", 'w') as f:
+        json.dump(data, f)
+
+      created_em = discord.Embed(
+        title="GalaxyServers Tickets",
+        description="Your ticket has been created at {}".format(
+          ticket_channel.mention),
+        color=0x00a8ff)
+
+      em = discord.Embed(title="Ticket Logs",
+                          description=f"",
+                          color=0x00a8ff)
+      em.add_field(name="Creator", value=f"{payload.member.mention}", inline=True)
+      em.add_field(name="Ticket", value=f"{ticket_channel.name}", inline=True)
+      time = datetime.now(tz=pytz.timezone('America/Denver'))
+      formatted = time.strftime("%m/%d/%y, %I:%M %p")
+      em.set_footer(text=formatted)
+
+      await ticketlog_channel.send(embed=em)
+
+      pp = guild.get_channel(payload.channel_id)
+
+      await pp.send(embed=created_em, delete_after=10)
+
+      await ticket_channel.send(
+        f'{payload.member.mention}, please answer the following questions.'
+      )
+
+      await ticket_channel.send('-----------------------------------------------')
+
+      channel = client.get_channel(payload.channel_id)
+      message = await channel.fetch_message(payload.message_id)
+      user = client.get_user(payload.user_id)
+      emoji = "<a:VoteBan:861446399131385916>"
+      await message.remove_reaction(emoji, user)
+
+
+      def check(message):
+        return message.channel == ticket_channel and message.author == payload.member
+
+      a = discord.Embed(title="Question 1",
+                        description=f"What is your IGN?",
+                        color=0x00a8ff)
+
+      await ticket_channel.send(embed=a)
+
+      question1 = await client.wait_for('message', check=check)
+
+      b = discord.Embed(title="Question 2",
+                        description=f"Who are you reporting?",
+                        color=0x00a8ff)
+
+      await ticket_channel.send(embed=b)
+
+      question2 = await client.wait_for('message', check=check)
+
+      c = discord.Embed(title="Question 3",
+                        description=f"Why should we punish this player?",
+                        color=0x00a8ff)
+
+      await ticket_channel.send(embed=c)
+
+      question3 = await client.wait_for('message', check=check)
+
+      d = discord.Embed(title="Question 4",
+                        description=f"Please provide any evidence, if applicable.",
+                        color=0x00a8ff)
+
+      await ticket_channel.send(embed=d)
+
+      question4 = await client.wait_for('message', check=check)
+
+      staff_role = discord.utils.get(guild.roles, name="Support Team")
+      staff_role2 = discord.utils.get(guild.roles, name="Staff Team")
+
+      x = f'Support will be with you shortly.'
+
+      em = discord.Embed(title="Responses:",
+                        description=f"**IGN**: {question1.content}\n**Player**: {question2.content} \n**Reason**: {question3.content} \n**Evidence**: {question4.content}",
+                        color=0x00a8ff)
+      
+      msg = await ticket_channel.send(content=x, embed=em)
+
+      await msg.add_reaction('🔒')
+
+  if str(payload.emoji) == '<a:CatGlitch:861446879657459742>' and (payload.message_id) == 861459457442447370:
+
+      await client.wait_until_ready()
+
+      with open("data.json") as f:
+        data = json.load(f)
+      
+      ticket_number = int(data["ticket-counter"])
+      ticket_number += 1
+
+      category_channel = guild.get_channel(836099144984035348)
+      ticketlog_channel = guild.get_channel(836102113892761671)
+      ticket_channel = await category_channel.create_text_channel(
+	    "ticket-{}".format(ticket_number))
+      await ticket_channel.set_permissions(guild.get_role(guild.id),
+                          send_messages=False,
+                          read_messages=False)
+     
+      for role_id in data["valid-roles"]:
+        role = guild.get_role(role_id)
+
+        await ticket_channel.set_permissions(role,
+                                            send_messages=True,
+                                            read_messages=True,
+                                            embed_links=True,
+                                            attach_files=True,
+                                            read_message_history=True,
+                                            external_emojis=True)
+                                          
+      await ticket_channel.set_permissions(payload.member,
+                                          send_messages=True,
+                                          read_messages=True,
+                                          add_reactions=True,
+                                          embed_links=True,
+                                          attach_files=True,
+                                          read_message_history=True,
+                                          external_emojis=True)
+
+      staff_role = discord.utils.get(guild.roles, name="Support")
+
+      pinged_msg_content = ""
+      non_mentionable_roles = []
+
+      if data["pinged-roles"] != []:
+
+        for role_id in data["pinged-roles"]:
+          role = payload.guild.get_role(role_id)
+
+          pinged_msg_content += role.mention
+          pinged_msg_content += " "
+
+          if role.mentionable:
+            pass
+          else:
+            await role.edit(mentionable=True)
+            non_mentionable_roles.append(role)
+        
+        await ticket_channel.send(pinged_msg_content)
+
+        for role in non_mentionable_roles:
+          await role.edit(mentionable=False)
+
+      data["ticket-channel-ids"].append(ticket_channel.id)
+
+      data["ticket-counter"] = int(ticket_number)
+      with open ("data.json", 'w') as f:
+        json.dump(data, f)
+
+      created_em = discord.Embed(
+        title="GalaxyServers Tickets",
+        description="Your ticket has been created at {}".format(
+          ticket_channel.mention),
+        color=0x00a8ff)
+
+      em = discord.Embed(title="Ticket Logs",
+                          description=f"",
+                          color=0x00a8ff)
+      em.add_field(name="Creator", value=f"{payload.member.mention}", inline=True)
+      em.add_field(name="Ticket", value=f"{ticket_channel.name}", inline=True)
+      time = datetime.now(tz=pytz.timezone('America/Denver'))
+      formatted = time.strftime("%m/%d/%y, %I:%M %p")
+      em.set_footer(text=formatted)
+
+      await ticketlog_channel.send(embed=em)
+
+      pp = guild.get_channel(payload.channel_id)
+
+      await pp.send(embed=created_em, delete_after=10)
+
+      await ticket_channel.send(
+        f'{payload.member.mention}, please answer the following questions.'
+      )
+
+      await ticket_channel.send('-----------------------------------------------')
+
+      channel = client.get_channel(payload.channel_id)
+      message = await channel.fetch_message(payload.message_id)
+      user = client.get_user(payload.user_id)
+      emoji = "<a:CatGlitch:861446879657459742>"
+      await message.remove_reaction(emoji, user)
+
+
+      def check(message):
+        return message.channel == ticket_channel and message.author == payload.member
+
+      a = discord.Embed(title="Question 1",
+                        description=f"What is your IGN?",
+                        color=0x00a8ff)
+
+      await ticket_channel.send(embed=a)
+
+      question1 = await client.wait_for('message', check=check)
+
+      b = discord.Embed(title="Question 2",
+                        description=f"What server is the bug from?",
+                        color=0x00a8ff)
+
+      await ticket_channel.send(embed=b)
+
+      question2 = await client.wait_for('message', check=check)
+
+      staff_role = discord.utils.get(guild.roles, name="Support Team")
+      staff_role2 = discord.utils.get(guild.roles, name="Staff Team")
+
+      x = f'Support will be with you shortly.'
+
+      em = discord.Embed(title="Responses:",
+                        description=f"**IGN**: {question1.content}\n**Bug**: {question2.content}",
+                        color=0x00a8ff)
+      
+      msg = await ticket_channel.send(content=x, embed=em)
+
+      await msg.add_reaction('🔒')
+
+  if str(payload.emoji) == '<a:Money:861451984376692777>' and (payload.message_id) == 861459457442447370:
+
+      await client.wait_until_ready()
+
+      with open("data.json") as f:
+        data = json.load(f)
+      
+      ticket_number = int(data["ticket-counter"])
+      ticket_number += 1
+
+      category_channel = guild.get_channel(836099144984035348)
+      ticketlog_channel = guild.get_channel(836102113892761671)
+      ticket_channel = await category_channel.create_text_channel(
+	    "ticket-{}".format(ticket_number))
+      await ticket_channel.set_permissions(guild.get_role(guild.id),
+                          send_messages=False,
+                          read_messages=False)
+     
+      for role_id in data["valid-roles"]:
+        role = guild.get_role(role_id)
+
+        await ticket_channel.set_permissions(role,
+                                            send_messages=True,
+                                            read_messages=True,
+                                            embed_links=True,
+                                            attach_files=True,
+                                            read_message_history=True,
+                                            external_emojis=True)
+                                          
+      await ticket_channel.set_permissions(payload.member,
+                                          send_messages=True,
+                                          read_messages=True,
+                                          add_reactions=True,
+                                          embed_links=True,
+                                          attach_files=True,
+                                          read_message_history=True,
+                                          external_emojis=True)
+
+      staff_role = discord.utils.get(guild.roles, name="Support")
+
+      pinged_msg_content = ""
+      non_mentionable_roles = []
+
+      if data["pinged-roles"] != []:
+
+        for role_id in data["pinged-roles"]:
+          role = payload.guild.get_role(role_id)
+
+          pinged_msg_content += role.mention
+          pinged_msg_content += " "
+
+          if role.mentionable:
+            pass
+          else:
+            await role.edit(mentionable=True)
+            non_mentionable_roles.append(role)
+        
+        await ticket_channel.send(pinged_msg_content)
+
+        for role in non_mentionable_roles:
+          await role.edit(mentionable=False)
+
+      data["ticket-channel-ids"].append(ticket_channel.id)
+
+      data["ticket-counter"] = int(ticket_number)
+      with open ("data.json", 'w') as f:
+        json.dump(data, f)
+
+      created_em = discord.Embed(
+        title="GalaxyServers Tickets",
+        description="Your ticket has been created at {}".format(
+          ticket_channel.mention),
+        color=0x00a8ff)
+
+      em = discord.Embed(title="Ticket Logs",
+                          description=f"",
+                          color=0x00a8ff)
+      em.add_field(name="Creator", value=f"{payload.member.mention}", inline=True)
+      em.add_field(name="Ticket", value=f"{ticket_channel.name}", inline=True)
+      time = datetime.now(tz=pytz.timezone('America/Denver'))
+      formatted = time.strftime("%m/%d/%y, %I:%M %p")
+      em.set_footer(text=formatted)
+
+      await ticketlog_channel.send(embed=em)
+
+      pp = guild.get_channel(payload.channel_id)
+
+      await pp.send(embed=created_em, delete_after=10)
+
+      await ticket_channel.send(
+        f'{payload.member.mention}, please answer the following questions.'
+      )
+
+      await ticket_channel.send('-----------------------------------------------')
+
+      channel = client.get_channel(payload.channel_id)
+      message = await channel.fetch_message(payload.message_id)
+      user = client.get_user(payload.user_id)
+      emoji = "<a:Money:861451984376692777>"
+      await message.remove_reaction(emoji, user)
+
+
+      def check(message):
+        return message.channel == ticket_channel and message.author == payload.member
+
+      a = discord.Embed(title="Question 1",
+                        description=f"What is your IGN?",
+                        color=0x00a8ff)
+
+      await ticket_channel.send(embed=a)
+
+      question1 = await client.wait_for('message', check=check)
+
+      b = discord.Embed(title="Question 2",
+                        description=f"What did you purchase?",
+                        color=0x00a8ff)
+
+      await ticket_channel.send(embed=b)
+
+      question2 = await client.wait_for('message', check=check)
+
+      c = discord.Embed(title="Question 3",
+                        description=f"What issue are you facing?",
+                        color=0x00a8ff)
+
+      await ticket_channel.send(embed=c)
+
+      question3 = await client.wait_for('message', check=check)
+
+      staff_role = discord.utils.get(guild.roles, name="Support Team")
+      staff_role2 = discord.utils.get(guild.roles, name="Staff Team")
+
+      x = f'Support will be with you shortly.'
+
+      em = discord.Embed(title="Responses:",
+                        description=f"**IGN**: {question1.content}\n**Purchase**: {question2.content} \n**Issue**: {question3.content}",
+                        color=0x00a8ff)
+      
+      msg = await ticket_channel.send(content=x, embed=em)
+
+      await msg.add_reaction('🔒')
+
+  if str(payload.emoji) == '<a:Other:861447459828924436>' and (payload.message_id) == 861459457442447370:
+
+      await client.wait_until_ready()
+
+      with open("data.json") as f:
+        data = json.load(f)
+      
+      ticket_number = int(data["ticket-counter"])
+      ticket_number += 1
+
+      category_channel = guild.get_channel(836099144984035348)
+      ticketlog_channel = guild.get_channel(836102113892761671)
+      ticket_channel = await category_channel.create_text_channel(
+	    "ticket-{}".format(ticket_number))
+      await ticket_channel.set_permissions(guild.get_role(guild.id),
+                          send_messages=False,
+                          read_messages=False)
+     
+      for role_id in data["valid-roles"]:
+        role = guild.get_role(role_id)
+
+        await ticket_channel.set_permissions(role,
+                                            send_messages=True,
+                                            read_messages=True,
+                                            embed_links=True,
+                                            attach_files=True,
+                                            read_message_history=True,
+                                            external_emojis=True)
+                                          
+      await ticket_channel.set_permissions(payload.member,
+                                          send_messages=True,
+                                          read_messages=True,
+                                          add_reactions=True,
+                                          embed_links=True,
+                                          attach_files=True,
+                                          read_message_history=True,
+                                          external_emojis=True)
+
+      staff_role = discord.utils.get(guild.roles, name="Support")
+
+      pinged_msg_content = ""
+      non_mentionable_roles = []
+
+      if data["pinged-roles"] != []:
+
+        for role_id in data["pinged-roles"]:
+          role = payload.guild.get_role(role_id)
+
+          pinged_msg_content += role.mention
+          pinged_msg_content += " "
+
+          if role.mentionable:
+            pass
+          else:
+            await role.edit(mentionable=True)
+            non_mentionable_roles.append(role)
+        
+        await ticket_channel.send(pinged_msg_content)
+
+        for role in non_mentionable_roles:
+          await role.edit(mentionable=False)
+
+      data["ticket-channel-ids"].append(ticket_channel.id)
+
+      data["ticket-counter"] = int(ticket_number)
+      with open ("data.json", 'w') as f:
+        json.dump(data, f)
+
+      created_em = discord.Embed(
+        title="GalaxyServers Tickets",
+        description="Your ticket has been created at {}".format(
+          ticket_channel.mention),
+        color=0x00a8ff)
+
+      em = discord.Embed(title="Ticket Logs",
+                          description=f"",
+                          color=0x00a8ff)
+      em.add_field(name="Creator", value=f"{payload.member.mention}", inline=True)
+      em.add_field(name="Ticket", value=f"{ticket_channel.name}", inline=True)
+      time = datetime.now(tz=pytz.timezone('America/Denver'))
+      formatted = time.strftime("%m/%d/%y, %I:%M %p")
+      em.set_footer(text=formatted)
+
+      await ticketlog_channel.send(embed=em)
+
+      pp = guild.get_channel(payload.channel_id)
+
+      await pp.send(embed=created_em, delete_after=10)
+
+      await ticket_channel.send(
+        f'{payload.member.mention}, please answer the following questions.'
+      )
+
+      await ticket_channel.send('-----------------------------------------------')
+
+      channel = client.get_channel(payload.channel_id)
+      message = await channel.fetch_message(payload.message_id)
+      user = client.get_user(payload.user_id)
+      emoji = "<a:Other:861447459828924436>"
+      await message.remove_reaction(emoji, user)
+
+
+      def check(message):
+        return message.channel == ticket_channel and message.author == payload.member
+
+      a = discord.Embed(title="Question 1",
+                        description=f"What is your IGN?",
+                        color=0x00a8ff)
+
+      await ticket_channel.send(embed=a)
+
+      question1 = await client.wait_for('message', check=check)
+
+      b = discord.Embed(title="Question 2",
+                        description=f"Please give us a description on why you made this ticket.",
+                        color=0x00a8ff)
+
+      await ticket_channel.send(embed=b)
+
+      question2 = await client.wait_for('message', check=check)
+
+      staff_role = discord.utils.get(guild.roles, name="Support Team")
+      staff_role2 = discord.utils.get(guild.roles, name="Staff Team")
+
+      x = f'Support will be with you shortly.'
+
+      em = discord.Embed(title="Responses:",
+                        description=f"**IGN**: {question1.content}\n**Issue**: {question2.content}",
                         color=0x00a8ff)
       
       msg = await ticket_channel.send(content=x, embed=em)
@@ -1185,5 +1904,3 @@ async def on_command_error(ctx, error):
   else:
       print('Ignoring exception in command {}:'.format(ctx.command), file=sys.stderr)
       traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
-
-client.run('')
