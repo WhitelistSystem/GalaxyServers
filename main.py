@@ -40,6 +40,8 @@ class PersistentViewBot(commands.Bot):
         if not self.persistent_views_added:
             self.add_view(PersistentView())
             self.add_view(Confirm())
+            self.add_view(ReactionRoles())
+            self.add_view(DropdownView())
             self.persistent_views_added = True
             activity = discord.Game(name="play.galaxyservers.xyz", type=3)
             await self.change_presence(status=discord.Status.online,
@@ -49,8 +51,6 @@ class PersistentViewBot(commands.Bot):
 
 class Confirm(discord.ui.View):
     def __init__(self):
-        super().__init__()
-        self.value = None
         super().__init__(timeout=None)
 
     @discord.ui.button(emoji='<a:Smoothie:861446075876638720>', style=discord.ButtonStyle.green, custom_id='pp1')
@@ -65,6 +65,8 @@ class Confirm(discord.ui.View):
 
 class ReactionRoles(discord.ui.View):
     def __init__(self):
+        super().__init__()
+        self.value = None
         super().__init__(timeout=None)
 
     @discord.ui.button(label='Sneak Peaks', style=discord.ButtonStyle.green, row=1, custom_id='hfiuwa:sp')
@@ -159,6 +161,7 @@ class Dropdown(discord.ui.Select):
 class DropdownView(discord.ui.View):
     def __init__(self):
         super().__init__()
+        super().__init__(timeout=None)
         self.add_item(Dropdown())
 
 client = PersistentViewBot()
@@ -2143,6 +2146,8 @@ async def all(ctx):
 @client.event
 async def on_command_error(ctx, error):
     if isinstance(error, commands.CommandNotFound):
+        return
+    elif isinstance(error, commands.MissingPermissions):
         return
     elif isinstance(error, commands.MemberNotFound):
         return
