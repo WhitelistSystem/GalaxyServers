@@ -31,9 +31,9 @@ For dropdown selections, you need a View class with it. This handles the timeout
 You can have either "bot" or "client" within the bot, I chose client, this makes commands for example `@client.command` work. If you chose "bot", you would use `@bot.command`
 
 ## Prepare Command
-`@client.command(aliases=['test1'])
+```@client.command(aliases=['test1'])
 @commands.has_permissions(administrator=True)
 async def prepare(ctx: commands.Context):
-    await ctx.send("What's your favourite colour?", view=PersistentView())`
+    await ctx.send("What's your favourite colour?", view=PersistentView())```
     
 This command
