@@ -1998,17 +1998,6 @@ async def suggestion(ctx):
     return
 
 
-@client.command()
-@commands.has_permissions(administrator=True)
-async def all(ctx):
-    guild = client.get_guild(821595276837781506)
-    a = discord.utils.get(ctx.guild.roles, name='Galaxy Servers Member')
-    for m in guild.members:
-        await m.add_roles(a)
-        await ctx.channel.send('Added.', delete_after=2)
-        await asyncio.sleep(1)
-
-
 @client.event
 async def on_command_error(ctx, error):
     if isinstance(error, commands.CommandNotFound):
