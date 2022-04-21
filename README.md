@@ -34,6 +34,7 @@ You can have either "bot" or "client" within the bot, I chose client, this makes
 ```@client.command(aliases=['test1'])
 @commands.has_permissions(administrator=True)
 async def prepare(ctx: commands.Context):
-    await ctx.send("What's your favourite colour?", view=PersistentView())```
+    await ctx.send("What's your favourite colour?", view=PersistentView())
+```
     
 This command
